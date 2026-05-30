@@ -53,21 +53,24 @@
 #include <Arduino.h>
 #include "commands.h"
 #include "sensors.h"
-
+#include "gy85_driver.h"
 #ifdef USE_BASE
   #include "motor_driver.h"
   #include "encoder_driver.h"
   #include "diff_controller.h"
-
-  /* PID loop timing */
-  #define PID_RATE              30        // Hz
-  const int PID_INTERVAL      = 1000 / PID_RATE;
-  unsigned long nextPID       = PID_INTERVAL;
-
-  /* Auto-stop if no movement command received within this window */
-  #define AUTO_STOP_INTERVAL    2000      // ms
-  long lastMotorCommand       = AUTO_STOP_INTERVAL;
+  #define PID_RATE           30
+  const int PID_INTERVAL   = 1000 / PID_RATE;
+  unsigned long nextPID    = PID_INTERVAL;
+  #define AUTO_STOP_INTERVAL 2000
+  long lastMotorCommand    = AUTO_STOP_INTERVAL;
 #endif
+
+/* ── IMU timing ── */
+#define IMU_RATE           20
+const int IMU_INTERVAL   = 1000 / IMU_RATE;
+unsigned long nextIMU    = IMU_INTERVAL;
+static ImuData imuData;
+static bool    imuReady  = false;
 
 /* ── Serial parser state ─────────────────────────────────────── */
 int  arg   = 0;
@@ -139,6 +142,23 @@ int runCommand()
     ROS_SERIAL.println(Ping(arg1));
     break;
 
+  case READ_IMU:
+      // Trả về: "ax ay az gx gy gz mx my mz\r\n"
+      // ESP32 parse chuỗi này để fill sensor_msgs/Imu + MagneticField
+      if (imuReady) {
+        ROS_SERIAL.print(imuData.ax, 4); ROS_SERIAL.print(" ");
+        ROS_SERIAL.print(imuData.ay, 4); ROS_SERIAL.print(" ");
+        ROS_SERIAL.print(imuData.az, 4); ROS_SERIAL.print(" ");
+        ROS_SERIAL.print(imuData.gx, 4); ROS_SERIAL.print(" ");
+        ROS_SERIAL.print(imuData.gy, 4); ROS_SERIAL.print(" ");
+        ROS_SERIAL.print(imuData.gz, 4); ROS_SERIAL.print(" ");
+        ROS_SERIAL.print(imuData.mx, 2); ROS_SERIAL.print(" ");
+        ROS_SERIAL.print(imuData.my, 2); ROS_SERIAL.print(" ");
+        ROS_SERIAL.println(imuData.mz, 2);
+      } else {
+        ROS_SERIAL.println("IMU_NOT_READY");
+      }
+      break;
   /* ── Base controller commands ── */
 #ifdef USE_BASE
   case READ_ENCODERS:
@@ -206,7 +226,8 @@ void setup()
 {
   /* Open the ROS bridge serial port (USART2 via build flag) */
   ROS_SERIAL.begin(BAUDRATE);
-
+  delay(500);  // đợi serial ổn định
+  
 #ifdef USE_BASE
   /* STM32: hardware quadrature timers replace the AVR
      DDRD/PCMSK/PCICR register block from the original file.    */
@@ -217,6 +238,7 @@ void setup()
   initMotorController();    // TIM3 PWM + enable GPIO
   resetPID();
 #endif /* USE_BASE */
+  initImu(); 
 }
 
 /* ── loop ────────────────────────────────────────────────────── */
@@ -272,12 +294,17 @@ void loop()
     updatePID();
     nextPID += PID_INTERVAL;
   }
-
-  /* ── Auto-stop watchdog ── */
   if ((millis() - lastMotorCommand) > AUTO_STOP_INTERVAL)
   {
     setMotorSpeeds(0, 0);
     moving = 0;
   }
 #endif /* USE_BASE */
+
+  /* ── IMU sampling — độc lập với USE_BASE ── */
+  if (millis() > nextIMU)
+  {
+    imuReady = readImu(imuData);
+    nextIMU += IMU_INTERVAL;
+  }
 }

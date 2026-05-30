@@ -5,6 +5,7 @@
 #ifndef COMMANDS_H
 #define COMMANDS_H
 
+#define READ_IMU       'i'
 #define ANALOG_READ    'a'
 #define GET_BAUDRATE   'b'
 #define PIN_MODE       'c'
