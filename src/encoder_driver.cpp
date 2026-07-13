@@ -148,20 +148,18 @@ void initEncoders()
  */
 long readEncoder(int i)
 {
-    if (i == LEFT)
+    if (i == RIGHT)
     {
-        /* TIM2: 32-bit, read directly, subtract offset */
         int32_t raw = (int32_t)__HAL_TIM_GET_COUNTER(
                           EncTimerLeft->getHandle());
-        return (long)(raw - left_enc_offset);
+        return -(long)(raw - left_enc_offset);   // thêm dấu trừ
     }
     else
     {
-        /* TIM4: 16-bit + overflow accumulator */
         uint16_t cnt = (uint16_t)__HAL_TIM_GET_COUNTER(
                            EncTimerRight->getHandle());
         int32_t combined = right_enc_overflow + (int32_t)cnt;
-        return (long)(combined - right_enc_offset);
+        return -(long)(combined - right_enc_offset);   // thêm dấu trừ
     }
 }
 
@@ -173,7 +171,7 @@ long readEncoder(int i)
  */
 void resetEncoder(int i)
 {
-    if (i == LEFT)
+    if (i == RIGHT)
     {
         left_enc_offset = (int32_t)__HAL_TIM_GET_COUNTER(
                               EncTimerLeft->getHandle());
