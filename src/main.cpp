@@ -46,7 +46,7 @@
 #define ROS_SERIAL  Serial    // resolved to USART2 via build flag
 
 /* ── Baud rate & PWM ceiling ─────────────────────────────────── */
-#define BAUDRATE   115200
+#define BAUDRATE   921600 // Đã tăng lên 921600 để giảm trễ truyền UART
 #define MAX_PWM    255
 
 /* ── Core includes ───────────────────────────────────────────── */
@@ -54,11 +54,19 @@
 #include "commands.h"
 #include "sensors.h"
 #include "gy85_driver.h"
+#include "odometry.h"    // Module tính toán động học
+#include "imu_filter.h"  // Module lọc IMU (Madgwick)
+
+// Đảm bảo lệnh query được định nghĩa nếu chưa kịp thêm vào commands.h
+#ifndef QUERY_TELEMETRY
+#define QUERY_TELEMETRY 'q'
+#endif
+
 #ifdef USE_BASE
   #include "motor_driver.h"
   #include "encoder_driver.h"
   #include "diff_controller.h"
-  #define PID_RATE           30
+  #define PID_RATE           50  // Nâng lên 50Hz (20ms)
   const int PID_INTERVAL   = 1000 / PID_RATE;
   unsigned long nextPID    = PID_INTERVAL;
   #define AUTO_STOP_INTERVAL 2000
@@ -66,7 +74,7 @@
 #endif
 
 /* ── IMU timing ── */
-#define IMU_RATE           20
+#define IMU_RATE           50    // Nâng lên 50Hz (20ms)
 const int IMU_INTERVAL   = 1000 / IMU_RATE;
 unsigned long nextIMU    = IMU_INTERVAL;
 static ImuData imuData;
@@ -143,8 +151,7 @@ int runCommand()
     break;
 
   case READ_IMU:
-      // Trả về: "ax ay az gx gy gz mx my mz\r\n"
-      // ESP32 parse chuỗi này để fill sensor_msgs/Imu + MagneticField
+      // Trả về dữ liệu IMU thô (giữ lại để debug nếu cần)
       if (imuReady) {
         ROS_SERIAL.print(imuData.ax, 4); ROS_SERIAL.print(" ");
         ROS_SERIAL.print(imuData.ay, 4); ROS_SERIAL.print(" ");
@@ -153,12 +160,26 @@ int runCommand()
         ROS_SERIAL.print(imuData.gy, 4); ROS_SERIAL.print(" ");
         ROS_SERIAL.print(imuData.gz, 4); ROS_SERIAL.print(" ");
         ROS_SERIAL.print(imuData.mx, 2); ROS_SERIAL.print(" ");
-        ROS_SERIAL.print(imuData.my, 2); ROS_SERIAL.print(" ");
-        ROS_SERIAL.println(imuData.mz, 2);
+        ROS_SERIAL.print(imuData.my, 2); ROS_SERIAL.println(imuData.mz, 2);
       } else {
         ROS_SERIAL.println("IMU_NOT_READY");
       }
       break;
+
+  /* ── Lệnh mới: Lấy trọn gói dữ liệu Telemetry ── */
+  case QUERY_TELEMETRY:
+      // Chuỗi trả về: "X Y Theta Vx Vth q0 q1 q2 q3\r\n"
+      ROS_SERIAL.print(odom_x, 4); ROS_SERIAL.print(" ");
+      ROS_SERIAL.print(odom_y, 4); ROS_SERIAL.print(" ");
+      ROS_SERIAL.print(odom_theta, 4); ROS_SERIAL.print(" ");
+      ROS_SERIAL.print(odom_vx, 4); ROS_SERIAL.print(" ");
+      ROS_SERIAL.print(odom_vth, 4); ROS_SERIAL.print(" ");
+      ROS_SERIAL.print(q0, 4); ROS_SERIAL.print(" ");
+      ROS_SERIAL.print(q1, 4); ROS_SERIAL.print(" ");
+      ROS_SERIAL.print(q2, 4); ROS_SERIAL.print(" ");
+      ROS_SERIAL.println(q3, 4);
+      break;
+
   /* ── Base controller commands ── */
 #ifdef USE_BASE
   case READ_ENCODERS:
@@ -170,6 +191,7 @@ int runCommand()
   case RESET_ENCODERS:
     resetEncoders();
     resetPID();
+    initOdometry(); // Cần reset cả tọa độ khi reset encoder
     ROS_SERIAL.println("OK");
     break;
 
@@ -237,8 +259,11 @@ void setup()
 
   initMotorController();    // TIM3 PWM + enable GPIO
   resetPID();
+  initOdometry();           // Khởi tạo biến tọa độ Odometry
 #endif /* USE_BASE */
+  
   initImu(); 
+  initImuFilter(50.0f);     // Khởi tạo Madgwick filter với tần số 50Hz
 }
 
 /* ── loop ────────────────────────────────────────────────────── */
@@ -287,11 +312,16 @@ void loop()
     }
   }
 
-  /* ── PID update at fixed rate ── */
+  /* ── PID & Odometry update at fixed rate ── */
 #ifdef USE_BASE
   if (millis() > nextPID)
   {
     updatePID();
+    
+    // Tính toán Odometry ngay sau khi chốt xong số lượng tick của PID
+    float dt = (float)PID_INTERVAL / 1000.0f; // Sẽ luôn là 0.02s (20ms)
+    updateOdometry(readEncoder(LEFT), readEncoder(RIGHT), dt);
+
     nextPID += PID_INTERVAL;
   }
   if ((millis() - lastMotorCommand) > AUTO_STOP_INTERVAL)
@@ -301,10 +331,13 @@ void loop()
   }
 #endif /* USE_BASE */
 
-  /* ── IMU sampling — độc lập với USE_BASE ── */
+  /* ── IMU sampling & Filtering ── */
   if (millis() > nextIMU)
   {
     imuReady = readImu(imuData);
+    if (imuReady) {
+      updateImuFilter(imuData);  // Đưa dữ liệu thô vào bộ lọc Madgwick
+    }
     nextIMU += IMU_INTERVAL;
   }
 }

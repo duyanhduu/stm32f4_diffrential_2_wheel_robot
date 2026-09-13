@@ -4,7 +4,7 @@
 
 #ifndef COMMANDS_H
 #define COMMANDS_H
-
+#define QUERY_TELEMETRY 'q'
 #define READ_IMU       'i'
 #define ANALOG_READ    'a'
 #define GET_BAUDRATE   'b'
