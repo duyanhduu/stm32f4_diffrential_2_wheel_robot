@@ -65,7 +65,7 @@
 #ifdef USE_BASE
   #include "motor_driver.h"
   #include "encoder_driver.h"
-  #include "diff_controller.h"
+  #include "diff_controller.h" // Sử dụng module mới
   #define PID_RATE           50  // Nâng lên 50Hz (20ms)
   const int PID_INTERVAL   = 1000 / PID_RATE;
   unsigned long nextPID    = PID_INTERVAL;
@@ -190,7 +190,7 @@ int runCommand()
 
   case RESET_ENCODERS:
     resetEncoders();
-    resetPID();
+    resetDiffController();
     initOdometry(); // Cần reset cả tọa độ khi reset encoder
     ROS_SERIAL.println("OK");
     break;
@@ -200,37 +200,39 @@ int runCommand()
     if (arg1 == 0 && arg2 == 0)
     {
       setMotorSpeeds(0, 0);
-      resetPID();
+      resetDiffController();
       moving = 0;
     }
     else
     {
       moving = 1;
     }
-    leftPID.TargetTicksPerFrame  = arg1;
-    rightPID.TargetTicksPerFrame = arg2;
+    targetTicksLeft = (float)arg1;
+    targetTicksRight = (float)arg2;
     ROS_SERIAL.println("OK");
     break;
 
   case MOTOR_RAW_PWM:
     lastMotorCommand = millis();
-    resetPID();
+    resetDiffController();
     moving = 0;           // temporarily bypass PID
     setMotorSpeeds(arg1, arg2);
     ROS_SERIAL.println("OK");
     break;
-
   case UPDATE_PID:
-    /* Format: "u Kp:Kd:Ki:Ko"  e.g. "u 20:12:0:50" */
-    while ((str = strtok_r(p, ":", &p)) != NULL)
-    {
-      pid_args[i] = atoi(str);
-      i++;
-    }
-    Kp = pid_args[0];
-    Kd = pid_args[1];
-    Ki = pid_args[2];
-    Ko = pid_args[3];
+      /* Format: "u Kp:Kd:Ki:Ko"  e.g. "u 20:12:0:50" */
+      while ((str = strtok_r(p, ":", &p)) != NULL)
+      {
+        if(i < 4) {
+            pid_args[i] = atoi(str);
+        }
+        i++;
+      }
+      // Cập nhật lại với Kp, Ki, Kd, Ko theo đúng thứ tự mảng
+      if (i >= 4) {
+        leftPID.updateConstants(pid_args[0], pid_args[2], pid_args[1], pid_args[3]);
+        rightPID.updateConstants(pid_args[0], pid_args[2], pid_args[1], pid_args[3]);
+      }
     ROS_SERIAL.println("OK");
     break;
 #endif /* USE_BASE */
@@ -258,7 +260,7 @@ void setup()
 #endif
 
   initMotorController();    // TIM3 PWM + enable GPIO
-  resetPID();
+  resetDiffController();
   initOdometry();           // Khởi tạo biến tọa độ Odometry
 #endif /* USE_BASE */
   
@@ -316,7 +318,7 @@ void loop()
 #ifdef USE_BASE
   if (millis() > nextPID)
   {
-    updatePID();
+    updateDiffController();
     
     // Tính toán Odometry ngay sau khi chốt xong số lượng tick của PID
     float dt = (float)PID_INTERVAL / 1000.0f; // Sẽ luôn là 0.02s (20ms)
