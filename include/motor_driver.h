@@ -26,13 +26,14 @@
    Using PinName (PA0-style) so stm32duino maps them correctly
    to their alternate-function timer channels.
    ─────────────────────────────────────────────────────────── */
-#define RIGHT_MOTOR_BACKWARD  PB4   // TIM3_CH1
-#define RIGHT_MOTOR_FORWARD   PB5   // TIM3_CH2
-#define LEFT_MOTOR_BACKWARD   PB0   // TIM3_CH3
-#define LEFT_MOTOR_FORWARD    PB1   // TIM3_CH4
+// Đổi từ FORWARD/BACKWARD sang RPWM/LPWM
+#define RIGHT_MOTOR_LPWM      PB4   // TIM3_CH1 (Lùi)
+#define RIGHT_MOTOR_RPWM      PB5   // TIM3_CH2 (Tiến)
+#define LEFT_MOTOR_LPWM       PB0   // TIM3_CH3 (Lùi)
+#define LEFT_MOTOR_RPWM       PB1   // TIM3_CH4 (Tiến)
 
-#define LEFT_MOTOR_ENABLE     PB12  // GPIO output
-#define RIGHT_MOTOR_ENABLE    PB13  // GPIO output
+#define LEFT_MOTOR_ENABLE     PB12  // Nối vào cả L_EN và R_EN của BTS7960 trái
+#define RIGHT_MOTOR_ENABLE    PB13  // Nối vào cả L_EN và R_EN của BTS7960 phải
 
 /* ── PWM resolution ───────────────────────────────────────────
    8-bit (0–255) matches the original Arduino analogWrite range.

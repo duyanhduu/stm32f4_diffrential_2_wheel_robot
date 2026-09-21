@@ -61,7 +61,9 @@
 #ifndef QUERY_TELEMETRY
 #define QUERY_TELEMETRY 'q'
 #endif
-
+#ifndef L298_MOTOR_DRIVER
+  #define L298_MOTOR_DRIVER
+#endif
 #ifdef USE_BASE
   #include "motor_driver.h"
   #include "encoder_driver.h"

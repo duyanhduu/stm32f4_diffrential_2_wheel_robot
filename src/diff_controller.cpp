@@ -8,8 +8,8 @@
 #endif
 // Khởi tạo 2 object PID độc lập, giới hạn output từ -MAX_PWM đến MAX_PWM.
 // Sử dụng bộ số mặc định gốc của bạn: Kp=5, Ki=0, Kd=1, Ko=50
-IncrementalPID leftPID(-MAX_PWM, MAX_PWM, 4, 0, 1, 50);
-IncrementalPID rightPID(-MAX_PWM, MAX_PWM, 4, 0, 1, 50);
+IncrementalPID leftPID(-MAX_PWM, MAX_PWM, 5, 0, 1, 50);
+IncrementalPID rightPID(-MAX_PWM, MAX_PWM, 5, 0, 1, 50);
 
 double targetTicksLeft = 0.0;
 double targetTicksRight = 0.0;

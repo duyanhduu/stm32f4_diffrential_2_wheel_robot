@@ -37,10 +37,10 @@ HardwareTimer *MotorTimer = nullptr;
    a second pinmap walk at runtime.                              */
 static inline uint32_t pinToChannel(uint32_t pin)
 {
-    if (pin == RIGHT_MOTOR_BACKWARD) return TIM_CHANNEL_1;  // PB4
-    if (pin == RIGHT_MOTOR_FORWARD)  return TIM_CHANNEL_2;  // PB5
-    if (pin == LEFT_MOTOR_BACKWARD)  return TIM_CHANNEL_3;  // PB0
-    if (pin == LEFT_MOTOR_FORWARD)   return TIM_CHANNEL_4;  // PB1
+    if (pin == RIGHT_MOTOR_LPWM) return TIM_CHANNEL_1;  // PB4
+    if (pin == RIGHT_MOTOR_RPWM) return TIM_CHANNEL_2;  // PB5
+    if (pin == LEFT_MOTOR_LPWM)  return TIM_CHANNEL_3;  // PB0
+    if (pin == LEFT_MOTOR_RPWM)  return TIM_CHANNEL_4;  // PB1
     return TIM_CHANNEL_1;  // fallback (should never hit)
 }
 
@@ -77,13 +77,13 @@ void initMotorController()
     MotorTimer->setOverflow(MOTOR_PWM_MAX + 1, TICK_FORMAT);
 
     /* Configure each pin as TIM3 alternate function output,
-       then set PWM mode 1 (high when CNT < CCR) on its channel. */
-    const uint32_t pwmPins[] = {
-        RIGHT_MOTOR_BACKWARD,   // CH1 PB4
-        RIGHT_MOTOR_FORWARD,    // CH2 PB5
-        LEFT_MOTOR_BACKWARD,    // CH3 PB0
-        LEFT_MOTOR_FORWARD      // CH4 PB1
-    };
+        then set PWM mode 1 (high when CNT < CCR) on its channel. */
+        const uint32_t pwmPins[] = {
+            RIGHT_MOTOR_LPWM,   // CH1 PB4
+            RIGHT_MOTOR_RPWM,   // CH2 PB5
+            LEFT_MOTOR_LPWM,    // CH3 PB0
+            LEFT_MOTOR_RPWM     // CH4 PB1
+        };
     const uint32_t channels[] = {
         TIM_CHANNEL_1, TIM_CHANNEL_2,
         TIM_CHANNEL_3, TIM_CHANNEL_4
@@ -125,38 +125,27 @@ void setMotorSpeed(int i, int spd)
 {
     uint8_t reverse = 0;
 
-    if (spd < 0)
-    {
+    if (spd < 0) {
         spd     = -spd;
         reverse = 1;
     }
-    if (spd > MOTOR_PWM_MAX)
-        spd = MOTOR_PWM_MAX;
+    if (spd > MOTOR_PWM_MAX) spd = MOTOR_PWM_MAX;
 
-    if (i == LEFT)
-    {
-        if (reverse == 0)
-        {
-            setPWM(LEFT_MOTOR_FORWARD,  (uint16_t)spd);
-            setPWM(LEFT_MOTOR_BACKWARD, 0);
+    if (i == LEFT) {
+        if (reverse == 0) {
+            setPWM(LEFT_MOTOR_RPWM,  (uint16_t)spd);
+            setPWM(LEFT_MOTOR_LPWM, 0);
+        } else {
+            setPWM(LEFT_MOTOR_LPWM, (uint16_t)spd);
+            setPWM(LEFT_MOTOR_RPWM,  0);
         }
-        else
-        {
-            setPWM(LEFT_MOTOR_BACKWARD, (uint16_t)spd);
-            setPWM(LEFT_MOTOR_FORWARD,  0);
-        }
-    }
-    else  /* RIGHT */
-    {
-        if (reverse == 0)
-        {
-            setPWM(RIGHT_MOTOR_FORWARD,  (uint16_t)spd);
-            setPWM(RIGHT_MOTOR_BACKWARD, 0);
-        }
-        else
-        {
-            setPWM(RIGHT_MOTOR_BACKWARD, (uint16_t)spd);
-            setPWM(RIGHT_MOTOR_FORWARD,  0);
+    } else {  /* RIGHT */
+        if (reverse == 0) {
+            setPWM(RIGHT_MOTOR_RPWM,  (uint16_t)spd);
+            setPWM(RIGHT_MOTOR_LPWM, 0);
+        } else {
+            setPWM(RIGHT_MOTOR_LPWM, (uint16_t)spd);
+            setPWM(RIGHT_MOTOR_RPWM,  0);
         }
     }
 }
