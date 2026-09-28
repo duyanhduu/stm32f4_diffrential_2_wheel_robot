@@ -46,7 +46,7 @@
 #define ROS_SERIAL  Serial    // resolved to USART2 via build flag
 
 /* ── Baud rate & PWM ceiling ─────────────────────────────────── */
-#define BAUDRATE   921600 // Đã tăng lên 921600 để giảm trễ truyền UART
+#define BAUDRATE   115200 // Đã tăng lên 921600 để giảm trễ truyền UART
 #define MAX_PWM    255
 
 /* ── Core includes ───────────────────────────────────────────── */
