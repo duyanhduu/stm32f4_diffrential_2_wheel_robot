@@ -34,7 +34,6 @@ typedef struct {
 typedef struct {
     float x, y, theta;
     float vx, vth;
-    float q0, q1, q2, q3;
 } OdomPayload;
 
 // Payload cho việc Tune PID (16 bytes - 4 biến float hoặc int tùy bạn)

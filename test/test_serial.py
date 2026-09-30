@@ -50,14 +50,15 @@ def read_serial_loop():
                 if checksum == calc_checksum:
                     # Gói tin đúng! Giải nén bằng struct
                     if msg_id == 0x02: # MSG_IMU_DATA (9 biến float)
-                        data = struct.unpack('<fffffffff', payload)
-                        print(f"[IMU] ax:{data[0]:.2f} | ay:{data[1]:.2f} | az:{data[2]:.2f}")
+                        d = struct.unpack('<fffffffff', payload)
+                        print(f"[IMU] ax:{d[0]:.2f} | ay:{d[1]:.2f} | az:{d[2]:.2f}")
+
                     
-                    elif msg_id == 0x03: # MSG_ODOM_DATA (9 biến float)
-                        data = struct.unpack('<fffffffff', payload)
+                    elif msg_id == 0x03: # MSG_ODOM_DATA (5 biến float)
+                        data = struct.unpack('<fffff', payload)
                         print(f"[ODOM] x:{data[0]:.2f} | y:{data[1]:.2f} | theta:{data[2]:.2f}")
                 else:
-                    print("--> LỖI: Sai Checksum!")
+                    print(f"[GÓI TIN KHÁC] Nhận được msg_id: {hex(msg_id)}, độ dài: {len(payload)}")
                 state = 0
 
 # --- HÀM GÓI VÀ GỬI LỆNH XUỐNG STM32 ---
@@ -82,15 +83,7 @@ t.start()
 # Vòng lặp chính: Cứ 3 giây gửi lệnh chạy, 3 giây sau gửi lệnh dừng
 try:
     while True:
-        send_cmd_vel(300, 300) # Test gửi số float 10.5
-        time.sleep(3)
-        
-        send_cmd_vel(-300, -300)  # Test lệnh dừng
-        time.sleep(3)
-        send_cmd_vel(300, -300)  # Test lệnh dừng
-        time.sleep(3)
-        send_cmd_vel(-300, 300)  # Test lệnh dừng
-        time.sleep(3)
+        time.sleep(1)
 except KeyboardInterrupt:
     print("Đã dừng test.")
     ser.close()

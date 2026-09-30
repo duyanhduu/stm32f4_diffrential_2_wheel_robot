@@ -66,10 +66,4 @@ void updateOdometry(long left_ticks, long right_ticks, float dt) {
     odom_theta += d_theta;
 
     odom_theta = atan2f(sinf(odom_theta), cosf(odom_theta));
-    
-    // Cập nhật vào biến mới
-    odom_q0 = cosf(odom_theta * 0.5f);
-    odom_q1 = 0.0f;
-    odom_q2 = 0.0f;
-    odom_q3 = sinf(odom_theta * 0.5f);
 }

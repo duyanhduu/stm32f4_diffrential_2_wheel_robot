@@ -174,8 +174,7 @@ void loop()
     OdomPayload odom;
     odom.x = odom_x; odom.y = odom_y; odom.theta = odom_theta;
     odom.vx = odom_vx; odom.vth = odom_vth;
-    // Dùng biến mới ở đây:
-    odom.q0 = odom_q0; odom.q1 = odom_q1; odom.q2 = odom_q2; odom.q3 = odom_q3;
+    // odom.q0 = odom_q0; odom.q1 = odom_q1; odom.q2 = odom_q2; odom.q3 = odom_q3;
     sendBinaryFrame(MSG_ODOM_DATA, (uint8_t*)&odom, sizeof(OdomPayload));
 
     nextPID += PID_INTERVAL;
@@ -194,7 +193,7 @@ void loop()
   {
     imuReady = readImu(imuData);
     if (imuReady) {
-      updateImuFilter(imuData);
+      // updateImuFilter(imuData);
       
       // GÓI VÀ BẮN DỮ LIỆU IMU VỀ PC
       ImuPayload imu;
