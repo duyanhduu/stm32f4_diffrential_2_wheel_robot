@@ -12,6 +12,12 @@ extern float odom_theta;
 extern float odom_vx;
 extern float odom_vth;
 
+/* Thêm tiền tố odom_ để không trùng với imu_filter */
+extern float odom_q0; 
+extern float odom_q1; 
+extern float odom_q2; 
+extern float odom_q3; 
+
 void initOdometry();
 void updateOdometry(long left_ticks, long right_ticks, float dt);
 

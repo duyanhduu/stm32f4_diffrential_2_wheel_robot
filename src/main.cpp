@@ -170,11 +170,12 @@ void loop()
     float dt = (float)PID_INTERVAL / 1000.0f; // Luôn là 0.02s
     updateOdometry(readEncoder(LEFT), readEncoder(RIGHT), dt);
     
-    // GÓI VÀ BẮN DỮ LIỆU ODOMETRY VỀ PC
+  // GÓI VÀ BẮN DỮ LIỆU ODOMETRY VỀ PC
     OdomPayload odom;
     odom.x = odom_x; odom.y = odom_y; odom.theta = odom_theta;
     odom.vx = odom_vx; odom.vth = odom_vth;
-    odom.q0 = q0; odom.q1 = q1; odom.q2 = q2; odom.q3 = q3;
+    // Dùng biến mới ở đây:
+    odom.q0 = odom_q0; odom.q1 = odom_q1; odom.q2 = odom_q2; odom.q3 = odom_q3;
     sendBinaryFrame(MSG_ODOM_DATA, (uint8_t*)&odom, sizeof(OdomPayload));
 
     nextPID += PID_INTERVAL;
